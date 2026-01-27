@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+firebase-debug.log
+
+# Build artifacts
+*.crx
+*.pem
+*.zip
+
+# Node (if dependencies added later)
+node_modules/
+
+# Local development
+.claude/
+*.local
+
+# Temporary files
+*.tmp
+*.temp

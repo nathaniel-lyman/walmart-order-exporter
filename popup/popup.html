@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walmart Order Exporter</title>
+  <link rel="stylesheet" href="../styles/popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="#0071dc">
+          <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18l6.9 3.45L12 11.08 5.1 7.63 12 4.18zM4 8.82l7 3.5v7.36l-7-3.5V8.82zm9 10.86v-7.36l7-3.5v7.36l-7 3.5z"/>
+        </svg>
+        <h1>Walmart Order Exporter</h1>
+      </div>
+    </div>
+
+    <div class="status-banner" id="pageBanner" style="display: none;">
+      <span class="status-icon"></span>
+      <span id="bannerText">Navigate to walmart.com/orders to use this extension</span>
+    </div>
+
+    <div class="options-section">
+      <h2>Export Options</h2>
+
+      <div class="option-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="includeItems" checked>
+          <span class="checkmark"></span>
+          <span class="label-text">Include item details</span>
+        </label>
+        <p class="option-description">Export individual items with quantities</p>
+      </div>
+
+      <div class="option-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="fetchItemPrices">
+          <span class="checkmark"></span>
+          <span class="label-text">Fetch item prices (slower)</span>
+        </label>
+        <p class="option-description">Get individual item prices by visiting each order page</p>
+      </div>
+
+      <div class="option-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="allPages" checked>
+          <span class="checkmark"></span>
+          <span class="label-text">Export all pages</span>
+        </label>
+        <p class="option-description">Automatically navigate through all order pages</p>
+      </div>
+
+      <div class="option-group">
+        <label class="select-label">Date Range</label>
+        <select id="dateRange" class="select-input">
+          <option value="current">Current page only</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 3 months</option>
+          <option value="180">Last 6 months</option>
+          <option value="365">Last year</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
+
+      <div class="option-group">
+        <label class="select-label">Order Type</label>
+        <select id="orderType" class="select-input">
+          <option value="all">All orders</option>
+          <option value="online">Online only</option>
+          <option value="store">In-store only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions-section">
+      <button id="exportBtn" class="primary-btn">
+        <span class="btn-text">Export Orders</span>
+      </button>
+
+      <button id="stopBtn" class="secondary-btn" style="display: none;">
+        <span class="btn-text">Stop Export</span>
+      </button>
+    </div>
+
+    <div class="progress-section" id="progressSection" style="display: none;">
+      <div class="progress-header">
+        <span id="progressLabel">Exporting...</span>
+        <span id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="progress-detail" id="progressDetail">Initializing...</p>
+    </div>
+
+    <div class="results-section" id="resultsSection" style="display: none;">
+      <div class="result-card success" id="successCard" style="display: none;">
+        <div class="result-content">
+          <h3>Export Complete!</h3>
+          <p id="resultSummary"></p>
+        </div>
+      </div>
+
+      <div class="result-card error" id="errorCard" style="display: none;">
+        <div class="result-content">
+          <h3>Export Failed</h3>
+          <p id="errorMessage"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button id="reloadBtn" class="reload-btn" title="Reload extension on current page">
+        ↻ Reload
+      </button>
+      <p>Made for easier order tracking</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

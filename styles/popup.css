@@ -1,0 +1,336 @@
+/**
+ * Walmart Order Exporter - Popup Styles
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  min-height: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  color: #2e2f32;
+  background: #ffffff;
+}
+
+.container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header */
+.header {
+  border-bottom: 1px solid #e6e7e8;
+  padding-bottom: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo svg {
+  flex-shrink: 0;
+}
+
+.logo h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0071dc;
+}
+
+/* Status Banner */
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.status-banner.warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.status-banner.info {
+  background: #e7f3ff;
+  color: #004085;
+  border: 1px solid #b8daff;
+}
+
+.status-banner.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-banner.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+/* Options Section */
+.options-section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6d6e71;
+  margin-bottom: 12px;
+}
+
+.option-group {
+  margin-bottom: 14px;
+}
+
+.option-description {
+  font-size: 12px;
+  color: #6d6e71;
+  margin-top: 4px;
+  margin-left: 28px;
+}
+
+/* Checkbox Styling */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #74767c;
+  border-radius: 4px;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label input:checked ~ .checkmark {
+  background: #0071dc;
+  border-color: #0071dc;
+}
+
+.checkbox-label input:checked ~ .checkmark::after {
+  content: '\2713';
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.checkbox-label:hover .checkmark {
+  border-color: #0071dc;
+}
+
+.label-text {
+  font-size: 14px;
+  color: #2e2f32;
+}
+
+/* Select Styling */
+.select-label {
+  display: block;
+  font-size: 13px;
+  color: #6d6e71;
+  margin-bottom: 6px;
+}
+
+.select-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #c2c3c5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #2e2f32;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.select-input:hover,
+.select-input:focus {
+  border-color: #0071dc;
+  outline: none;
+}
+
+/* Actions Section */
+.actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.primary-btn,
+.secondary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.primary-btn {
+  background: #0071dc;
+  color: white;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: #004f9a;
+}
+
+.primary-btn:disabled {
+  background: #c2c3c5;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: #f5f5f5;
+  color: #2e2f32;
+  border: 1px solid #c2c3c5;
+}
+
+.secondary-btn:hover {
+  background: #e6e7e8;
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
+/* Progress Section */
+.progress-section {
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.progress-bar {
+  height: 6px;
+  background: #e6e7e8;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #0071dc;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.progress-detail {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6d6e71;
+}
+
+/* Results Section */
+.result-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.result-card.success {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+}
+
+.result-card.error {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+}
+
+.result-icon {
+  font-size: 20px;
+}
+
+.result-content h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.result-content p {
+  font-size: 12px;
+  color: #6d6e71;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid #e6e7e8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer p {
+  font-size: 11px;
+  color: #9a9b9e;
+}
+
+.reload-btn {
+  background: transparent;
+  border: 1px solid #c2c3c5;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #6d6e71;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reload-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #0071dc;
+  color: #0071dc;
+}
+
+.reload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
