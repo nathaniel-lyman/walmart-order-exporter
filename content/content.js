@@ -92,6 +92,9 @@ class WalmartOrderExporter {
         tax: '',
         total: '',
         associateDiscount: '',
+        driverTip: '',
+        deliveryFee: '',
+        expressFee: '',
         storeLocation: { name: '', address: '' }
       };
     }
@@ -155,6 +158,9 @@ class WalmartOrderExporter {
       tax: taxMatch ? `$${taxMatch[1]}` : '',
       total: totalMatch ? `$${totalMatch[1]}` : '',
       associateDiscount,
+      driverTip: '',
+      deliveryFee: '',
+      expressFee: '',
       storeLocation
     };
   }
@@ -317,6 +323,9 @@ class WalmartOrderExporter {
           tax: '',
           total,
           associateDiscount: '',
+          driverTip: '',
+          deliveryFee: '',
+          expressFee: '',
           storeLocation: { name: '', address: '' }
         });
 
@@ -374,6 +383,9 @@ class WalmartOrderExporter {
           tax: '',
           total,
           associateDiscount: '',
+          driverTip: '',
+          deliveryFee: '',
+          expressFee: '',
           storeLocation: { name: '', address: '' }
         });
 
@@ -517,13 +529,10 @@ class WalmartOrderExporter {
 
       console.log('[Walmart Order Exporter] Extracted', items.length, 'detailed items for order', orderId);
 
-      // For store orders, also extract order metadata (date, subtotal, tax)
-      let orderMeta = null;
-      if (isStore) {
-        orderMeta = this.extractOrderMetaFromNextData(nextData);
-        if (orderMeta) {
-          console.log('[Walmart Order Exporter] Extracted store order metadata:', orderMeta);
-        }
+      // Extract order metadata (date, subtotal, tax, fees, discounts) for all orders
+      const orderMeta = this.extractOrderMetaFromNextData(nextData);
+      if (orderMeta) {
+        console.log('[Walmart Order Exporter] Extracted order metadata:', orderMeta);
       }
 
       return { items, orderMeta };
@@ -668,8 +677,9 @@ class WalmartOrderExporter {
   }
 
   /**
-   * Extract order metadata (date, subtotal, tax) from Next.js data structure
-   * Used for store orders where list page extraction may miss these fields
+   * Extract order metadata (date, subtotal, tax, fees, discounts) from Next.js data structure
+   * Used for orders where list page extraction may miss these fields
+   * Primary data source: order.priceDetails (confirmed via browser inspection)
    */
   extractOrderMetaFromNextData(nextData) {
     try {
@@ -690,23 +700,63 @@ class WalmartOrderExporter {
         meta.orderDate = order.orderDate;
       }
 
-      // Extract order summary (subtotal, tax)
-      const summary = order.orderSummary || order.summary;
-      if (summary) {
-        if (summary.subtotal !== undefined) {
-          meta.subtotal = typeof summary.subtotal === 'object'
-            ? (summary.subtotal.displayValue || `$${summary.subtotal.value?.toFixed(2)}`)
-            : (typeof summary.subtotal === 'number' ? `$${summary.subtotal.toFixed(2)}` : summary.subtotal);
+      // Use priceDetails (primary - confirmed via browser inspection) or orderSummary (fallback)
+      const priceDetails = order.priceDetails || order.orderSummary || order.summary;
+      if (priceDetails) {
+        // Subtotal
+        if (priceDetails.subTotal !== undefined) {
+          meta.subtotal = this.extractDisplayValue(priceDetails.subTotal);
+        } else if (priceDetails.subtotal !== undefined) {
+          meta.subtotal = this.extractDisplayValue(priceDetails.subtotal);
         }
-        if (summary.tax !== undefined) {
-          meta.tax = typeof summary.tax === 'object'
-            ? (summary.tax.displayValue || `$${summary.tax.value?.toFixed(2)}`)
-            : (typeof summary.tax === 'number' ? `$${summary.tax.toFixed(2)}` : summary.tax);
+
+        // Tax
+        if (priceDetails.taxTotal !== undefined) {
+          meta.tax = this.extractDisplayValue(priceDetails.taxTotal);
+        } else if (priceDetails.tax !== undefined) {
+          meta.tax = this.extractDisplayValue(priceDetails.tax);
         }
-        if (summary.total !== undefined) {
-          meta.total = typeof summary.total === 'object'
-            ? (summary.total.displayValue || `$${summary.total.value?.toFixed(2)}`)
-            : (typeof summary.total === 'number' ? `$${summary.total.toFixed(2)}` : summary.total);
+
+        // Total
+        if (priceDetails.grandTotal !== undefined) {
+          meta.total = this.extractDisplayValue(priceDetails.grandTotal);
+        } else if (priceDetails.total !== undefined) {
+          meta.total = this.extractDisplayValue(priceDetails.total);
+        }
+
+        // Driver Tip
+        if (priceDetails.driverTip) {
+          meta.driverTip = this.extractDisplayValue(priceDetails.driverTip);
+        }
+
+        // Associate Discount (from discounts array)
+        if (priceDetails.discounts && Array.isArray(priceDetails.discounts)) {
+          const assocDiscount = priceDetails.discounts.find(d =>
+            d.label?.toLowerCase().includes('associate') ||
+            d.label?.toLowerCase().includes('employee')
+          );
+          if (assocDiscount) {
+            meta.associateDiscount = this.extractDisplayValue(assocDiscount);
+          }
+        }
+
+        // Delivery Fee and Express Fee (from fees array)
+        if (priceDetails.fees && Array.isArray(priceDetails.fees)) {
+          // Look for delivery fee (various possible labels)
+          const deliveryFee = priceDetails.fees.find(f =>
+            /delivery/i.test(f.label) && !/express/i.test(f.label)
+          );
+          if (deliveryFee) {
+            meta.deliveryFee = this.extractDisplayValue(deliveryFee);
+          }
+
+          // Look for express fee
+          const expressFee = priceDetails.fees.find(f =>
+            /express/i.test(f.label)
+          );
+          if (expressFee) {
+            meta.expressFee = this.extractDisplayValue(expressFee);
+          }
         }
       }
 
@@ -715,6 +765,47 @@ class WalmartOrderExporter {
       console.error('[Walmart Order Exporter] Error extracting order meta:', error);
       return null;
     }
+  }
+
+  /**
+   * Extract display value from price detail object or primitive
+   * Handles structures like {label, value, displayValue} or plain numbers/strings
+   */
+  extractDisplayValue(priceObj) {
+    if (priceObj === null || priceObj === undefined) return '';
+
+    // If it's already a string, return it (possibly add $ if missing)
+    if (typeof priceObj === 'string') {
+      return priceObj.startsWith('$') || priceObj.startsWith('-$') ? priceObj : `$${priceObj}`;
+    }
+
+    // If it's a number, format it
+    if (typeof priceObj === 'number') {
+      return `$${priceObj.toFixed(2)}`;
+    }
+
+    // If it's an object, try to get displayValue or format value
+    if (typeof priceObj === 'object') {
+      if (priceObj.displayValue) {
+        return priceObj.displayValue;
+      }
+      if (priceObj.value !== undefined) {
+        const val = priceObj.value;
+        if (typeof val === 'number') {
+          return `$${val.toFixed(2)}`;
+        }
+        return String(val);
+      }
+      if (priceObj.amount !== undefined) {
+        const amt = priceObj.amount;
+        if (typeof amt === 'number') {
+          return `$${amt.toFixed(2)}`;
+        }
+        return String(amt);
+      }
+    }
+
+    return '';
   }
 
   /**
@@ -960,6 +1051,9 @@ class WalmartOrderExporter {
         tax: '',
         total: '',
         associateDiscount: '',
+        driverTip: '',
+        deliveryFee: '',
+        expressFee: '',
         storeLocation: { name: '', address: '' },
         error: error.message
       };
@@ -1110,8 +1204,13 @@ class WalmartOrderExporter {
         orderDate: 'Unknown',
         status: 'Could not parse',
         items: [],
+        subtotal: '',
+        tax: '',
         total: '',
         associateDiscount: '',
+        driverTip: '',
+        deliveryFee: '',
+        expressFee: '',
         storeLocation: { name: '', address: '' }
       };
     }
@@ -1168,6 +1267,9 @@ class WalmartOrderExporter {
       tax: taxMatch ? `$${taxMatch[1]}` : '',
       total: totalMatch ? `$${totalMatch[1]}` : '',
       associateDiscount: '',
+      driverTip: '',
+      deliveryFee: '',
+      expressFee: '',
       storeLocation: { name: '', address: '' }
     };
   }
@@ -1250,6 +1352,9 @@ class WalmartOrderExporter {
       tax,
       total,
       associateDiscount: '',
+      driverTip: '',
+      deliveryFee: '',
+      expressFee: '',
       storeLocation: { name: '', address: '' }
     };
   }
@@ -1645,12 +1750,12 @@ class WalmartOrderExporter {
                 console.log('[Walmart Order Exporter] Updated order with', detailedItems.length, 'detailed items');
               }
 
-              // For store orders, update date/totals from fetched metadata if available
-              if (isStore && orderMeta) {
+              // Update order fields from fetched metadata if available
+              if (orderMeta) {
                 if (orderMeta.orderDate && orderDetails.orderDate === 'Unknown') {
                   // Normalize the date format (ISO timestamp -> "Jan 22, 2026")
                   orderDetails.orderDate = this.formatDate(orderMeta.orderDate);
-                  console.log('[Walmart Order Exporter] Updated store order date:', orderDetails.orderDate);
+                  console.log('[Walmart Order Exporter] Updated order date:', orderDetails.orderDate);
                 }
                 if (orderMeta.subtotal && !orderDetails.subtotal) {
                   orderDetails.subtotal = orderMeta.subtotal;
@@ -1660,6 +1765,19 @@ class WalmartOrderExporter {
                 }
                 if (orderMeta.total && !orderDetails.total) {
                   orderDetails.total = orderMeta.total;
+                }
+                // New fields from priceDetails
+                if (orderMeta.driverTip) {
+                  orderDetails.driverTip = orderMeta.driverTip;
+                }
+                if (orderMeta.associateDiscount) {
+                  orderDetails.associateDiscount = orderMeta.associateDiscount;
+                }
+                if (orderMeta.deliveryFee) {
+                  orderDetails.deliveryFee = orderMeta.deliveryFee;
+                }
+                if (orderMeta.expressFee) {
+                  orderDetails.expressFee = orderMeta.expressFee;
                 }
               }
             }
@@ -1781,6 +1899,9 @@ class WalmartOrderExporter {
         'Order Total',
         'Order Type',
         'Associate Discount',
+        'Driver Tip',
+        'Delivery Fee',
+        'Express Fee',
         'Store Location'
       ].join(','));
 
@@ -1803,6 +1924,9 @@ class WalmartOrderExporter {
               this.escapeCSV(order.total),
               this.escapeCSV(orderType),
               this.escapeCSV(order.associateDiscount || ''),
+              this.escapeCSV(order.driverTip || ''),
+              this.escapeCSV(order.deliveryFee || ''),
+              this.escapeCSV(order.expressFee || ''),
               this.escapeCSV(storeLocation)
             ].join(','));
           }
@@ -1820,6 +1944,9 @@ class WalmartOrderExporter {
             this.escapeCSV(order.total),
             this.escapeCSV(orderType),
             this.escapeCSV(order.associateDiscount || ''),
+            this.escapeCSV(order.driverTip || ''),
+            this.escapeCSV(order.deliveryFee || ''),
+            this.escapeCSV(order.expressFee || ''),
             this.escapeCSV(storeLocation)
           ].join(','));
         }
@@ -1836,6 +1963,9 @@ class WalmartOrderExporter {
         'Order Total',
         'Order Type',
         'Associate Discount',
+        'Driver Tip',
+        'Delivery Fee',
+        'Express Fee',
         'Store Location'
       ].join(','));
 
@@ -1854,6 +1984,9 @@ class WalmartOrderExporter {
           this.escapeCSV(order.total),
           this.escapeCSV(orderType),
           this.escapeCSV(order.associateDiscount || ''),
+          this.escapeCSV(order.driverTip || ''),
+          this.escapeCSV(order.deliveryFee || ''),
+          this.escapeCSV(order.expressFee || ''),
           this.escapeCSV(storeLocation)
         ].join(','));
       }
