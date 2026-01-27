@@ -484,9 +484,9 @@ class WalmartOrderExporter {
   /**
    * Fetch detailed item info from order detail page (includes prices)
    */
-  async fetchDetailedItems(orderId) {
+  async fetchDetailedItems(orderId, isStore = false) {
     try {
-      const orderUrl = `https://www.walmart.com/orders/${orderId}`;
+      const orderUrl = `https://www.walmart.com/orders/${orderId}${isStore ? '?storePurchase=true' : ''}`;
       console.log('[Walmart Order Exporter] Fetching detailed items for order:', orderId);
 
       const response = await fetch(orderUrl, {
@@ -516,7 +516,17 @@ class WalmartOrderExporter {
       const items = this.extractItemsFromNextData(nextData, orderId);
 
       console.log('[Walmart Order Exporter] Extracted', items.length, 'detailed items for order', orderId);
-      return items;
+
+      // For store orders, also extract order metadata (date, subtotal, tax)
+      let orderMeta = null;
+      if (isStore) {
+        orderMeta = this.extractOrderMetaFromNextData(nextData);
+        if (orderMeta) {
+          console.log('[Walmart Order Exporter] Extracted store order metadata:', orderMeta);
+        }
+      }
+
+      return { items, orderMeta };
     } catch (error) {
       console.error('[Walmart Order Exporter] Error fetching detailed items:', error);
       return null;
@@ -655,6 +665,56 @@ class WalmartOrderExporter {
     }
 
     return items;
+  }
+
+  /**
+   * Extract order metadata (date, subtotal, tax) from Next.js data structure
+   * Used for store orders where list page extraction may miss these fields
+   */
+  extractOrderMetaFromNextData(nextData) {
+    try {
+      const pageProps = nextData?.props?.pageProps;
+      if (!pageProps) return null;
+
+      // Try different paths to find order data
+      const order = pageProps?.initialData?.data?.order ||
+                    pageProps?.orderDetails ||
+                    pageProps?.order;
+
+      if (!order) return null;
+
+      const meta = {};
+
+      // Extract order date
+      if (order.orderDate) {
+        meta.orderDate = order.orderDate;
+      }
+
+      // Extract order summary (subtotal, tax)
+      const summary = order.orderSummary || order.summary;
+      if (summary) {
+        if (summary.subtotal !== undefined) {
+          meta.subtotal = typeof summary.subtotal === 'object'
+            ? (summary.subtotal.displayValue || `$${summary.subtotal.value?.toFixed(2)}`)
+            : (typeof summary.subtotal === 'number' ? `$${summary.subtotal.toFixed(2)}` : summary.subtotal);
+        }
+        if (summary.tax !== undefined) {
+          meta.tax = typeof summary.tax === 'object'
+            ? (summary.tax.displayValue || `$${summary.tax.value?.toFixed(2)}`)
+            : (typeof summary.tax === 'number' ? `$${summary.tax.toFixed(2)}` : summary.tax);
+        }
+        if (summary.total !== undefined) {
+          meta.total = typeof summary.total === 'object'
+            ? (summary.total.displayValue || `$${summary.total.value?.toFixed(2)}`)
+            : (typeof summary.total === 'number' ? `$${summary.total.toFixed(2)}` : summary.total);
+        }
+      }
+
+      return Object.keys(meta).length > 0 ? meta : null;
+    } catch (error) {
+      console.error('[Walmart Order Exporter] Error extracting order meta:', error);
+      return null;
+    }
   }
 
   /**
@@ -1576,10 +1636,32 @@ class WalmartOrderExporter {
               detail: `Fetching item prices for order ${displayId}...`
             });
 
-            const detailedItems = await this.fetchDetailedItems(orderDetails.orderId);
-            if (detailedItems && detailedItems.length > 0) {
-              orderDetails.items = detailedItems;
-              console.log('[Walmart Order Exporter] Updated order with', detailedItems.length, 'detailed items');
+            const isStore = orderDetails.orderType === 'store';
+            const fetchResult = await this.fetchDetailedItems(orderDetails.orderId, isStore);
+            if (fetchResult) {
+              const { items: detailedItems, orderMeta } = fetchResult;
+              if (detailedItems && detailedItems.length > 0) {
+                orderDetails.items = detailedItems;
+                console.log('[Walmart Order Exporter] Updated order with', detailedItems.length, 'detailed items');
+              }
+
+              // For store orders, update date/totals from fetched metadata if available
+              if (isStore && orderMeta) {
+                if (orderMeta.orderDate && orderDetails.orderDate === 'Unknown') {
+                  // Normalize the date format (ISO timestamp -> "Jan 22, 2026")
+                  orderDetails.orderDate = this.formatDate(orderMeta.orderDate);
+                  console.log('[Walmart Order Exporter] Updated store order date:', orderDetails.orderDate);
+                }
+                if (orderMeta.subtotal && !orderDetails.subtotal) {
+                  orderDetails.subtotal = orderMeta.subtotal;
+                }
+                if (orderMeta.tax && !orderDetails.tax) {
+                  orderDetails.tax = orderMeta.tax;
+                }
+                if (orderMeta.total && !orderDetails.total) {
+                  orderDetails.total = orderMeta.total;
+                }
+              }
             }
 
             // Rate limiting delay between fetches
